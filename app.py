@@ -7,9 +7,7 @@ import os
 st.set_page_config(page_title="Barcode Defect Tracker", layout="centered")
 st.title("📦 Barcode Scanner + Defect Logger")
 
-# ----------------------------------
-# ✅ 1. LIVE BARCODE SCANNER CAMERA
-# ----------------------------------
+# ✅ 1. Working Camera Barcode Scanner (html5-qrcode)
 components.html(
     """
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -46,7 +44,7 @@ components.html(
                     scanner.stop();
                 },
                 (errorMessage) => {
-                    // Ignore scan errors
+                    // Optional: log errors
                 }
             );
         });
@@ -55,20 +53,14 @@ components.html(
     height=600,
 )
 
-# ----------------------------------
-# ✅ 2. ENTER THE TAG SEEN ABOVE
-# ----------------------------------
-st.markdown("### ✍️ Confirm the Scanned Tag")
-tag = st.text_input("Enter the Tag Number shown above (manually)")
+# ✅ 2. Tag Entry (manual confirmation after scanning)
+st.markdown("### ✍️ Confirm the Scanned Tag Number")
+tag = st.text_input("Enter the Tag Number displayed above")
 
 if tag:
     st.success(f"✅ Tag Confirmed: `{tag}`")
 
-    # ----------------------------------
-    # ✅ 3. DEFECT DETAILS ENTRY
-    # ----------------------------------
-    st.markdown("### 🛠️ Enter Defect Details")
-
+    # ✅ 3. Defect Info Entry
     defect_type = st.selectbox("❌ Select Defect Type", [
         "Loose Stitching", "Piping Off", "Stain", "Torn Fabric",
         "Broken Frame", "Wrong Fabric", "Others"
@@ -80,12 +72,10 @@ if tag:
     st.markdown("### 📸 Take a Picture of the Defect")
     defect_image = st.camera_input("Capture Defect Photo")
 
-    # ----------------------------------
-    # ✅ 4. SAVE LOG
-    # ----------------------------------
+    # ✅ 4. Submit
     if st.button("✅ Submit Entry"):
         if not responsible_person:
-            st.warning("Please enter the name of the responsible person.")
+            st.warning("Please enter the name of the person responsible.")
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             image_path = None
