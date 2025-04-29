@@ -4,15 +4,15 @@ import pandas as pd
 from datetime import datetime
 import os
 
-st.set_page_config(page_title="Defect Tracker", layout="centered")
-st.title("📦 Live Barcode Scanner + Defect Logger")
+st.set_page_config(page_title="Barcode-Based Defect Tracker", layout="centered")
+st.title("📦 Barcode Scanner + Defect Logger")
 
-# ------------------ HTML Barcode Scanner ------------------
+# ------------------ Embedded Barcode Scanner ------------------
 components.html(
     """
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <div id="reader" width="600px"></div>
-    <div id="scan-result" style="margin-top:20px; font-size:18px; color:green;"></div>
+    <div id="reader" width="600px" style="margin: auto;"></div>
+    <div id="scan-result" style="margin-top:20px; font-size:18px; color:green; text-align:center;"></div>
     <script>
         function docReady(fn) {
             if (document.readyState === "complete" || document.readyState === "interactive") {
@@ -44,7 +44,7 @@ components.html(
                     scanner.stop();
                 },
                 (errorMessage) => {
-                    // console.log("Scan error:", errorMessage);
+                    // Scan errors ignored
                 }
             );
         });
@@ -53,27 +53,31 @@ components.html(
     height=600,
 )
 
-# ------------------ Tag Input ------------------
-st.markdown("### ✍️ Confirm Scanned Tag Below")
-tag = st.text_input("Enter the Tag Number from above manually")
+# ------------------ Manual Confirmation ------------------
+st.markdown("### ✍️ Confirm or Enter Scanned Tag")
+tag = st.text_input("Enter Tag Number (as displayed above after scanning)")
 
 if tag:
     st.success(f"✅ Tag Confirmed: `{tag}`")
 
-    # ------------------ Defect Details ------------------
+    # ------------------ Defect Entry Section ------------------
+    st.markdown("### 🛠️ Defect Details")
+
     defect_type = st.selectbox("❌ Select Defect Type", [
-        "Loose Stitching", "Piping Off", "Stain", "Torn Fabric", "Broken Frame", "Wrong Fabric", "Others"
+        "Loose Stitching", "Piping Off", "Stain", "Torn Fabric",
+        "Broken Frame", "Wrong Fabric", "Others"
     ])
 
     responsible_person = st.text_input("👷 Name of Person Responsible")
     comment = st.text_area("📝 Additional Notes (optional)")
 
-    st.markdown("### 📸 Capture Defect Image Below")
-    defect_image = st.camera_input("Take a Photo of the Defect")
+    st.markdown("### 📸 Take a Picture of the Defect")
+    defect_image = st.camera_input("Capture Defect Photo")
 
+    # ------------------ Submit Button ------------------
     if st.button("✅ Submit Entry"):
         if not responsible_person:
-            st.warning("Please enter the name of the person responsible.")
+            st.warning("Please enter the name of the responsible person.")
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             image_path = None
@@ -89,19 +93,19 @@ if tag:
                 "Timestamp": timestamp,
                 "Tag Number": tag,
                 "Defect Type": defect_type,
-                "Responsible": responsible_person,
+                "Responsible Person": responsible_person,
                 "Comment": comment,
                 "Defect Image": image_path if defect_image else "No Image"
             }
 
+            log_file = "defect_log.csv"
             df = pd.DataFrame([entry])
 
-            log_file = "defect_log.csv"
             if not os.path.exists(log_file):
                 df.to_csv(log_file, index=False)
             else:
                 df.to_csv(log_file, mode='a', header=False, index=False)
 
-            st.success("✅ Defect entry submitted successfully.")
+            st.success("✅ Entry saved successfully.")
 else:
-    st.info("Scan a barcode above and then enter the tag manually to continue.")
+    st.info("📷 Please scan a tag and confirm the number above to continue.")
