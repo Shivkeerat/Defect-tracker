@@ -4,10 +4,12 @@ import pandas as pd
 from datetime import datetime
 import os
 
-st.set_page_config(page_title="Barcode-Based Defect Tracker", layout="centered")
+st.set_page_config(page_title="Barcode Defect Tracker", layout="centered")
 st.title("📦 Barcode Scanner + Defect Logger")
 
-# ------------------ Embedded Barcode Scanner ------------------
+# ----------------------------------
+# ✅ 1. LIVE BARCODE SCANNER CAMERA
+# ----------------------------------
 components.html(
     """
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -44,7 +46,7 @@ components.html(
                     scanner.stop();
                 },
                 (errorMessage) => {
-                    // Scan errors ignored
+                    // Ignore scan errors
                 }
             );
         });
@@ -53,15 +55,19 @@ components.html(
     height=600,
 )
 
-# ------------------ Manual Confirmation ------------------
-st.markdown("### ✍️ Confirm or Enter Scanned Tag")
-tag = st.text_input("Enter Tag Number (as displayed above after scanning)")
+# ----------------------------------
+# ✅ 2. ENTER THE TAG SEEN ABOVE
+# ----------------------------------
+st.markdown("### ✍️ Confirm the Scanned Tag")
+tag = st.text_input("Enter the Tag Number shown above (manually)")
 
 if tag:
     st.success(f"✅ Tag Confirmed: `{tag}`")
 
-    # ------------------ Defect Entry Section ------------------
-    st.markdown("### 🛠️ Defect Details")
+    # ----------------------------------
+    # ✅ 3. DEFECT DETAILS ENTRY
+    # ----------------------------------
+    st.markdown("### 🛠️ Enter Defect Details")
 
     defect_type = st.selectbox("❌ Select Defect Type", [
         "Loose Stitching", "Piping Off", "Stain", "Torn Fabric",
@@ -74,7 +80,9 @@ if tag:
     st.markdown("### 📸 Take a Picture of the Defect")
     defect_image = st.camera_input("Capture Defect Photo")
 
-    # ------------------ Submit Button ------------------
+    # ----------------------------------
+    # ✅ 4. SAVE LOG
+    # ----------------------------------
     if st.button("✅ Submit Entry"):
         if not responsible_person:
             st.warning("Please enter the name of the responsible person.")
@@ -98,9 +106,9 @@ if tag:
                 "Defect Image": image_path if defect_image else "No Image"
             }
 
-            log_file = "defect_log.csv"
             df = pd.DataFrame([entry])
 
+            log_file = "defect_log.csv"
             if not os.path.exists(log_file):
                 df.to_csv(log_file, index=False)
             else:
@@ -108,4 +116,4 @@ if tag:
 
             st.success("✅ Entry saved successfully.")
 else:
-    st.info("📷 Please scan a tag and confirm the number above to continue.")
+    st.info("📷 Scan a barcode above and manually enter the tag to proceed.")
