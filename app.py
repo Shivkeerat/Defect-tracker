@@ -7,11 +7,13 @@ import os
 st.set_page_config(page_title="Defect Tracker", layout="centered")
 st.title("🛠️ Barcode Scanner + Defect Logger")
 
-# ✅ Get the scanned tag from URL query parameter
-query_params = st.query_params
-scanned_tag = query_params.get("scanned", [None])[0]
+# ✅ Listen for scanned tag from JavaScript
+if "scanned_tag" not in st.session_state:
+    st.session_state.scanned_tag = None
 
-# ✅ Display the barcode scanner component
+tag_placeholder = st.empty()
+
+# ✅ Set up listener for postMessage
 components.html(
     """
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -42,23 +44,45 @@ components.html(
                 { facingMode: "environment" },
                 config,
                 (decodedText, decodedResult) => {
-                    const base = window.location.href.split('?')[0];
-                    window.location.replace(base + "?scanned=" + encodeURIComponent(decodedText));
+                    window.parent.postMessage({ scanned: decodedText }, "*");
                     scanner.stop();
                 },
-                (errorMessage) => {
-                    // Ignore scan errors
-                }
+                (errorMessage) => {}
             );
+
+            // Post message listener
+            window.addEventListener("message", (event) => {
+                if (event.data && event.data.scanned) {
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = "scanned";
+                    input.value = event.data.scanned;
+                    document.body.appendChild(input);
+
+                    const form = document.createElement("form");
+                    form.method = "POST";
+                    form.style.display = "none";
+                    form.appendChild(input);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
         });
     </script>
     """,
     height=600,
 )
 
-# ✅ Show the rest of the form only if the tag is successfully scanned
-if scanned_tag:
-    st.success(f"✅ Tag Scanned: `{scanned_tag}`")
+# ✅ Receive scanned tag via form submit
+scanned_input = st.experimental_get_query_params().get("scanned", None)
+if scanned_input:
+    st.session_state.scanned_tag = scanned_input[0]
+
+tag = st.session_state.get("scanned_tag")
+
+# ✅ Show form only if tag is scanned
+if tag:
+    st.success(f"✅ Tag Scanned: `{tag}`")
 
     defect_type = st.selectbox("❌ Select Defect Type", [
         "Loose Stitching", "Piping Off", "Stain", "Torn Fabric",
@@ -77,14 +101,13 @@ if scanned_tag:
 
             image_folder = "images"
             os.makedirs(image_folder, exist_ok=True)
-            image_path = os.path.join(image_folder, f"{scanned_tag}_{timestamp.replace(':', '-')}.png")
+            image_path = os.path.join(image_folder, f"{tag}_{timestamp.replace(':', '-')}.png")
             with open(image_path, "wb") as f:
                 f.write(defect_image.getbuffer())
 
-            # Save entry to CSV
             entry = {
                 "Timestamp": timestamp,
-                "Tag Number": scanned_tag,
+                "Tag Number": tag,
                 "Defect Type": defect_type,
                 "Defect Image": image_path
             }
@@ -99,4 +122,4 @@ if scanned_tag:
 
             st.success("✅ Defect entry saved successfully.")
 else:
-    st.info("📷 Please scan a barcode above to begin logging a defect.")
+    st.info("📷 Scan a barcode above to continue.")
