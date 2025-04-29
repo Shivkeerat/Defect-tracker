@@ -7,11 +7,11 @@ import os
 st.set_page_config(page_title="Defect Tracker", layout="centered")
 st.title("🛠️ Barcode Scanner + Defect Logger")
 
-# ✅ Read scanned tag from URL
+# ✅ Get the scanned tag from URL query parameter
 query_params = st.query_params
 scanned_tag = query_params.get("scanned", [None])[0]
 
-# ✅ Barcode scanner (html5-qrcode)
+# ✅ Display the barcode scanner component
 components.html(
     """
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -43,11 +43,11 @@ components.html(
                 config,
                 (decodedText, decodedResult) => {
                     const base = window.location.href.split('?')[0];
-                    window.location.href = base + "?scanned=" + encodeURIComponent(decodedText);
+                    window.location.replace(base + "?scanned=" + encodeURIComponent(decodedText));
                     scanner.stop();
                 },
                 (errorMessage) => {
-                    // ignore scan errors
+                    // Ignore scan errors
                 }
             );
         });
@@ -56,7 +56,7 @@ components.html(
     height=600,
 )
 
-# ✅ Show form ONLY if a tag was scanned
+# ✅ Show the rest of the form only if the tag is successfully scanned
 if scanned_tag:
     st.success(f"✅ Tag Scanned: `{scanned_tag}`")
 
@@ -65,24 +65,23 @@ if scanned_tag:
         "Broken Frame", "Wrong Fabric", "Others"
     ])
 
-    st.markdown("### 📸 Take a Photo of the Defect")
-    defect_image = st.camera_input("Capture Defect Image")
+    st.markdown("### 📸 Capture Defect Image")
+    defect_image = st.camera_input("Take a Picture of the Defect")
 
     if st.button("✅ Submit Entry"):
         if not defect_image:
-            st.warning("⚠️ Please capture the defect image.")
+            st.warning("⚠️ Please capture a defect image before submitting.")
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             image_path = None
 
-            # Save the image
             image_folder = "images"
             os.makedirs(image_folder, exist_ok=True)
             image_path = os.path.join(image_folder, f"{scanned_tag}_{timestamp.replace(':', '-')}.png")
             with open(image_path, "wb") as f:
                 f.write(defect_image.getbuffer())
 
-            # Prepare data entry
+            # Save entry to CSV
             entry = {
                 "Timestamp": timestamp,
                 "Tag Number": scanned_tag,
@@ -100,4 +99,4 @@ if scanned_tag:
 
             st.success("✅ Defect entry saved successfully.")
 else:
-    st.info("📷 Please scan a barcode above to proceed with defect logging.")
+    st.info("📷 Please scan a barcode above to begin logging a defect.")
