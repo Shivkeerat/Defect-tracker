@@ -4,14 +4,14 @@ import pandas as pd
 from datetime import datetime
 import os
 
-st.set_page_config(page_title="Barcode Defect Tracker", layout="centered")
+st.set_page_config(page_title="Defect Tracker", layout="centered")
 st.title("🛠️ Barcode Scanner + Defect Logger")
 
-# ✅ 1. Get scanned tag from URL query parameters (if scanner fills it)
+# ✅ Read scanned tag from URL
 query_params = st.query_params
-auto_tag = query_params.get("scanned", [None])[0]
+scanned_tag = query_params.get("scanned", [None])[0]
 
-# ✅ 2. Live Camera Barcode Scanner with working JavaScript (html5-qrcode)
+# ✅ Barcode scanner (html5-qrcode)
 components.html(
     """
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -56,57 +56,48 @@ components.html(
     height=600,
 )
 
-# ✅ 3. Tag Input Field (auto-filled if scanned, manual fallback)
-st.markdown("### ✍️ Confirm or Enter Tag Number")
-if auto_tag:
-    st.success(f"✅ Tag Scanned: `{auto_tag}`")
-    tag = st.text_input("Tag Number", value=auto_tag)
-else:
-    st.info("📷 Scan the tag above, or enter manually if scanning fails.")
-    tag = st.text_input("Tag Number")
+# ✅ Show form ONLY if a tag was scanned
+if scanned_tag:
+    st.success(f"✅ Tag Scanned: `{scanned_tag}`")
 
-# ✅ 4. Defect Details Form
-if tag:
     defect_type = st.selectbox("❌ Select Defect Type", [
         "Loose Stitching", "Piping Off", "Stain", "Torn Fabric",
         "Broken Frame", "Wrong Fabric", "Others"
     ])
 
-    responsible_person = st.text_input("👷 Name of Person Responsible")
-    defect_description = st.text_area("📄 Defect Description (optional)")
-
-    st.markdown("### 📸 Take a Picture of the Defect")
-    defect_image = st.camera_input("Capture Defect Photo")
+    st.markdown("### 📸 Take a Photo of the Defect")
+    defect_image = st.camera_input("Capture Defect Image")
 
     if st.button("✅ Submit Entry"):
-        if not responsible_person:
-            st.warning("⚠️ Please enter the name of the responsible person.")
+        if not defect_image:
+            st.warning("⚠️ Please capture the defect image.")
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             image_path = None
 
-            if defect_image:
-                image_folder = "images"
-                os.makedirs(image_folder, exist_ok=True)
-                image_path = os.path.join(image_folder, f"{tag}_{timestamp.replace(':', '-')}.png")
-                with open(image_path, "wb") as f:
-                    f.write(defect_image.getbuffer())
+            # Save the image
+            image_folder = "images"
+            os.makedirs(image_folder, exist_ok=True)
+            image_path = os.path.join(image_folder, f"{scanned_tag}_{timestamp.replace(':', '-')}.png")
+            with open(image_path, "wb") as f:
+                f.write(defect_image.getbuffer())
 
+            # Prepare data entry
             entry = {
                 "Timestamp": timestamp,
-                "Tag Number": tag,
+                "Tag Number": scanned_tag,
                 "Defect Type": defect_type,
-                "Responsible Person": responsible_person,
-                "Defect Description": defect_description,
-                "Defect Image": image_path if image_path else "No Image"
+                "Defect Image": image_path
             }
 
-            df = pd.DataFrame([entry])
             log_file = "defect_log.csv"
+            df = pd.DataFrame([entry])
 
             if not os.path.exists(log_file):
                 df.to_csv(log_file, index=False)
             else:
                 df.to_csv(log_file, mode='a', header=False, index=False)
 
-            st.success("✅ Entry saved successfully.")
+            st.success("✅ Defect entry saved successfully.")
+else:
+    st.info("📷 Please scan a barcode above to proceed with defect logging.")
