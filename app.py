@@ -5,14 +5,17 @@ from datetime import datetime
 import os
 
 st.set_page_config(page_title="Defect Tracker", layout="centered")
-st.title("🛠️ Production Defect Tracker")
+st.title("🛠️ Barcode Scanner + Defect Logger")
 
-# ------------------------- 🔍 BARCODE SCANNER CAMERA -------------------------
+# ------------------------- 📤 Get Tag from URL Params if Passed -------------------------
+query_params = st.experimental_get_query_params()
+auto_tag = query_params.get("scanned", [None])[0]
+
+# ------------------------- 📷 Barcode Scanner Component -------------------------
 components.html(
     """
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <div id="reader" width="600px" style="margin: auto;"></div>
-    <div id="scan-result" style="margin-top:20px; font-size:18px; color:green; text-align:center;"></div>
     <script>
         function docReady(fn) {
             if (document.readyState === "complete" || document.readyState === "interactive") {
@@ -39,12 +42,13 @@ components.html(
                 { facingMode: "environment" },
                 config,
                 (decodedText, decodedResult) => {
-                    document.getElementById("scan-result").innerHTML =
-                        "<h3>✅ Scanned: " + decodedText + "</h3>";
+                    // Send scanned result to parent window (Streamlit)
+                    const base = window.location.href.split('?')[0];
+                    window.location.href = base + "?scanned=" + encodeURIComponent(decodedText);
                     scanner.stop();
                 },
                 (errorMessage) => {
-                    // ignore scan errors
+                    // Ignore errors
                 }
             );
         });
@@ -53,32 +57,32 @@ components.html(
     height=600,
 )
 
-# ------------------------- ✍️ TAG CONFIRMATION -------------------------
-st.markdown("### ✍️ Confirm or Enter Scanned Tag Number")
-tag = st.text_input("Enter Tag Number (seen above after scanning)")
+# ------------------------- 🧠 Tag Field (auto or manual) -------------------------
+st.markdown("### ✍️ Tag Number")
 
+if auto_tag:
+    st.success(f"✅ Scanned Tag Detected: `{auto_tag}`")
+    tag = st.text_input("Tag Number", value=auto_tag)
+else:
+    st.info("📷 Please scan a barcode above or enter manually if scanning fails.")
+    tag = st.text_input("Tag Number")
+
+# ------------------------- 📄 Form Fields -------------------------
 if tag:
-    st.success(f"✅ Tag Confirmed: `{tag}`")
-
-    # ------------------------- 🛠️ DEFECT DETAILS -------------------------
-    st.markdown("### 🔧 Enter Defect Details")
-
     defect_type = st.selectbox("❌ Select Defect Type", [
         "Loose Stitching", "Piping Off", "Stain", "Torn Fabric",
         "Broken Frame", "Wrong Fabric", "Others"
     ])
 
     responsible_person = st.text_input("👷 Name of Person Responsible")
-    defect_description = st.text_area("📄 Detailed Description of the Defect (optional)")
+    defect_description = st.text_area("📄 Defect Description (optional)")
 
-    # ------------------------- 📸 TAKE PICTURE -------------------------
-    st.markdown("### 📸 Capture Image of the Defect")
-    defect_image = st.camera_input("Use Camera to Capture Defect Photo")
+    st.markdown("### 📸 Take a Photo of the Defect")
+    defect_image = st.camera_input("Capture Defect Image")
 
-    # ------------------------- ✅ SUBMIT FORM -------------------------
     if st.button("✅ Submit Entry"):
         if not responsible_person:
-            st.warning("⚠️ Please enter the name of the person responsible.")
+            st.warning("⚠️ Please enter the responsible person.")
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             image_path = None
@@ -99,14 +103,12 @@ if tag:
                 "Defect Image": image_path if image_path else "No Image"
             }
 
-            df = pd.DataFrame([entry])
             log_file = "defect_log.csv"
+            df = pd.DataFrame([entry])
 
             if not os.path.exists(log_file):
                 df.to_csv(log_file, index=False)
             else:
                 df.to_csv(log_file, mode='a', header=False, index=False)
 
-            st.success("✅ Defect entry submitted successfully.")
-else:
-    st.info("📷 Scan a barcode above and enter the tag number to begin.")
+            st.success("✅ Entry saved successfully.")
