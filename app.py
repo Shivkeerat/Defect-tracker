@@ -7,7 +7,7 @@ import os
 st.set_page_config(page_title="Defect Tracker", layout="centered")
 st.title("🛠️ Production Defect Tracker")
 
-# ------------------------- 🔍 BARCODE SCANNER (Working Camera) -------------------------
+# ------------------------- 🔍 BARCODE SCANNER CAMERA -------------------------
 components.html(
     """
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -44,7 +44,7 @@ components.html(
                     scanner.stop();
                 },
                 (errorMessage) => {
-                    // Optional: ignore scan errors
+                    // ignore scan errors
                 }
             );
         });
@@ -53,25 +53,32 @@ components.html(
     height=600,
 )
 
-# ------------------------- ✍️ MANUAL CONFIRMATION OF TAG -------------------------
-st.markdown("### ✍️ Confirm or Enter the Scanned Tag Number")
-tag = st.text_input("Enter the Tag Number shown above")
+# ------------------------- ✍️ TAG CONFIRMATION -------------------------
+st.markdown("### ✍️ Confirm or Enter Scanned Tag Number")
+tag = st.text_input("Enter Tag Number (seen above after scanning)")
 
 if tag:
     st.success(f"✅ Tag Confirmed: `{tag}`")
 
-    # ------------------ Keep the rest of your original defect tracker logic below ------------------
+    # ------------------------- 🛠️ DEFECT DETAILS -------------------------
+    st.markdown("### 🔧 Enter Defect Details")
+
     defect_type = st.selectbox("❌ Select Defect Type", [
-        "Loose Stitching", "Piping Off", "Stain", "Torn Fabric", "Broken Frame", "Wrong Fabric", "Others"
+        "Loose Stitching", "Piping Off", "Stain", "Torn Fabric",
+        "Broken Frame", "Wrong Fabric", "Others"
     ])
 
-    responsible_person = st.text_input("👷 Enter Name of Person Responsible")
-    comment = st.text_area("📝 Additional Notes (Optional)")
-    defect_image = st.camera_input("📸 Take a Picture of the Defect")
+    responsible_person = st.text_input("👷 Name of Person Responsible")
+    defect_description = st.text_area("📄 Detailed Description of the Defect (optional)")
 
+    # ------------------------- 📸 TAKE PICTURE -------------------------
+    st.markdown("### 📸 Capture Image of the Defect")
+    defect_image = st.camera_input("Use Camera to Capture Defect Photo")
+
+    # ------------------------- ✅ SUBMIT FORM -------------------------
     if st.button("✅ Submit Entry"):
         if not responsible_person:
-            st.warning("Please enter the name of the person responsible.")
+            st.warning("⚠️ Please enter the name of the person responsible.")
         else:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             image_path = None
@@ -88,8 +95,8 @@ if tag:
                 "Tag Number": tag,
                 "Defect Type": defect_type,
                 "Responsible Person": responsible_person,
-                "Comment": comment,
-                "Defect Image": image_path if defect_image else "No Image"
+                "Defect Description": defect_description,
+                "Defect Image": image_path if image_path else "No Image"
             }
 
             df = pd.DataFrame([entry])
@@ -102,4 +109,4 @@ if tag:
 
             st.success("✅ Defect entry submitted successfully.")
 else:
-    st.info("📷 Scan a barcode above and enter it here to continue.")
+    st.info("📷 Scan a barcode above and enter the tag number to begin.")
